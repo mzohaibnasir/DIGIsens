@@ -55,13 +55,14 @@ def test_raw_response(port, baudrate):
 
             # Check if it looks like valid response
             if raw_response[0:1] in [b'@', b'#']:
-                print("\n✓ Response starts with @ or # (good!)")
+                print("\n✓✓✓ Response starts with @ or # (VALID PROTOCOL!)")
                 if raw_response[-1:] == b'\r':
-                    print("✓ Response ends with CR (good!)")
+                    print("✓✓✓ Response ends with CR (CORRECT!)")
+                    print(f"\n*** THIS IS THE CORRECT BAUDRATE: {baudrate} ***")
                 else:
                     print("✗ Response doesn't end with CR")
             else:
-                print("\n✗ Response doesn't start with @ or # (wrong baudrate or noise)")
+                print("\n✗ Response doesn't start with @ or # (garbled - wrong baudrate)")
 
             ser.close()
             return True
@@ -90,16 +91,20 @@ if __name__ == '__main__':
     print("to diagnose baudrate and protocol issues.")
     print("="*60)
 
+    valid_found = False
     for baud in baudrates:
-        if test_raw_response(port, baud):
-            print(f"\n*** MUX responded at {baud} baud ***")
-            print("Review the hex data above to verify protocol format")
-            break
+        result = test_raw_response(port, baud)
+        if result:
+            # Check if response looks valid (starts with @ or #)
+            pass  # Will be shown in the test output
         time.sleep(0.5)
-    else:
-        print("\n" + "="*60)
-        print("No response at any baudrate")
-        print("\nCheck:")
-        print("  1. MUX power (12V, LED lit)")
-        print("  2. RS485 wiring (pins 1-2)")
-        print("  3. Only ONE MUX connected")
+
+    print("\n" + "="*60)
+    print("SUMMARY")
+    print("="*60)
+    print("If you saw valid responses (starting with @ or #), use that baudrate.")
+    print("If all responses were garbled, possible issues:")
+    print("  1. RS485 A/B polarity reversed (try swapping)")
+    print("  2. Electrical noise or interference")
+    print("  3. MUX using non-standard baudrate")
+    print("  4. RS485 converter issue")
