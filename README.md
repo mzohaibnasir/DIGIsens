@@ -307,14 +307,23 @@ sensor.poll_continuous('123', 0, interval=1.0, callback=my_callback)
 ##### Configuration Methods
 
 ```python
-# Get MUX info
-address = sensor.get_mux_address('123')
-model = sensor.get_model_number('123')
-revision = sensor.get_software_revision('123')
+# Get MUX ID using protocol 'ag' broadcast (only works with ONE MUX)
+# Uses extended addressing mode (16-char manufacturer ID) - recommended
+address = sensor.get_mux_address(use_extended=True)
+
+# Get MUX info (requires known MUX ID)
+model = sensor.get_model_number('0120220429103142', use_extended=True)
+revision = sensor.get_software_revision('0120220429103142', use_extended=True)
 
 # Change baudrate
-sensor.set_baudrate('123', 115200)
+sensor.set_baudrate('0120220429103142', 115200, use_extended=True)
 ```
+
+**Important Notes:**
+- `get_mux_address()` is a **broadcast command** that only works with **ONE MUX** connected
+- Per protocol specification (page 18), broadcast is **FORBIDDEN** with multiple MUXes
+- Manufacturer recommends using **extended addressing mode** (`use_extended=True`)
+- For systems with multiple MUXes, obtain IDs from physical device labels
 
 ### ShelfMonitor
 
@@ -423,12 +432,15 @@ def calculate_checksum(message):
 **Problem:** `TimeoutError: No response from sensor`
 
 **Solutions:**
-1. Verify MUX ID is correct
-2. Check power supply (12V)
-3. Verify RS485 wiring (pins 1-2)
-4. Test with broadcast ID: `000`
-5. Check baudrate matches MUX setting
-6. Verify RS485 A/B polarity
+1. Check power supply (12V - verify LED is lit on MUX)
+2. Verify RS485 wiring (pins 1-2 on RJ-45 connector)
+3. Test baudrates: `python test_baudrates.py /dev/ttyUSB0`
+4. Verify RS485 A/B polarity (try swapping if needed)
+5. Use protocol broadcast to get MUX ID (only works with ONE MUX):
+   ```python
+   mux_id = sensor.get_mux_address(use_extended=True)
+   ```
+6. For multiple MUXes: Check physical label on each MUX device for ID
 
 ### Invalid Readings
 

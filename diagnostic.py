@@ -95,27 +95,28 @@ def test_2_open_serial_port(port):
         return False
 
 
-def test_3_basic_communication(port, mux_id='000'):
-    """Test 3: Basic communication test."""
-    print_header(f"Test 3: Communication Test (MUX ID: {mux_id})")
+def test_3_basic_communication(port):
+    """Test 3: Basic communication test using protocol broadcast."""
+    print_header("Test 3: Communication Test (Protocol Broadcast)")
 
     try:
         with DigiSensInterface(port, timeout=2.0) as sensor:
             print_ok("Connection established")
 
-            # Try to get MUX address
-            print_step("Sending 'ag' (get address) command...")
+            # Try to get MUX address using protocol broadcast
+            print_step("Sending 'ag' broadcast command (extended mode)...")
+            print_info("Note: Only works with ONE MUX connected")
             try:
-                response = sensor.get_mux_address(mux_id)
-                print_ok(f"Received response: {response}")
+                response = sensor.get_mux_address(use_extended=True)
+                print_ok(f"Received manufacturer ID: {response}")
                 return True
             except TimeoutError:
-                print_error("No response from sensor")
+                print_error("No response from MUX")
                 print_info("Possible issues:")
-                print("  1. Wrong MUX ID (try '000' for broadcast)")
-                print("  2. MUX not powered (check 12V supply)")
-                print("  3. RS485 wiring incorrect")
-                print("  4. Baudrate mismatch")
+                print("  1. MUX not powered (check 12V supply)")
+                print("  2. RS485 wiring incorrect (check pins 1-2)")
+                print("  3. Baudrate mismatch (run: python test_baudrates.py)")
+                print("  4. Multiple MUXes connected (broadcast forbidden)")
                 return False
 
     except Exception as e:
@@ -124,35 +125,38 @@ def test_3_basic_communication(port, mux_id='000'):
 
 
 def test_4_discover_mux(port):
-    """Test 4: Try to discover MUX ID."""
-    print_header("Test 4: MUX Discovery")
+    """Test 4: Discover MUX using protocol 'ag' broadcast command."""
+    print_header("Test 4: MUX Discovery (Protocol Broadcast)")
 
-    print_info("Trying broadcast address 000...")
+    print_info("Using protocol 'ag' broadcast command (extended mode)...")
+    print_warning("This ONLY works with ONE MUX connected (protocol requirement)")
+    print_info("Manufacturer recommends extended addressing mode (16-char ID)")
 
     try:
         with DigiSensInterface(port, timeout=2.0) as sensor:
             try:
-                address = sensor.get_mux_address('000')
-                print_ok(f"Found MUX with address: {address}")
+                # Use extended mode (16-char manufacturer ID) as recommended
+                address = sensor.get_mux_address(use_extended=True)
+                print_ok(f"MUX responded with manufacturer ID: {address}")
+                print_info("This is the unique 16-character MUX ID")
+                print_info("Use this ID with extended addressing mode (#) in your application")
                 return address
             except TimeoutError:
-                print_warning("No response to broadcast")
-                print_info("Trying common IDs: 001, 123, 100...")
-
-                for test_id in ['001', '123', '100']:
-                    try:
-                        address = sensor.get_mux_address(test_id)
-                        print_ok(f"Found MUX with ID: {test_id}, Address: {address}")
-                        return test_id
-                    except TimeoutError:
-                        print(f"  No response from {test_id}")
-
-                print_error("Could not find any MUX")
-                print_info("Please provide MUX ID manually")
+                print_error("No response to 'ag' broadcast command")
+                print_info("\nPossible causes:")
+                print("  1. MUX not powered (check 12V supply, verify LED is lit)")
+                print("  2. RS485 wiring incorrect (check pins 1-2 on RJ-45)")
+                print("  3. Baudrate mismatch (run: python test_baudrates.py)")
+                print("  4. RS485 polarity reversed (try swapping A/B)")
+                print("  5. Multiple MUXes connected (broadcast forbidden per protocol)")
+                print("\n** For systems with multiple MUXes: **")
+                print("   The MUX ID must be obtained from the physical label")
+                print("   on each MUX device (broadcast doesn't work with multiple MUXes)")
                 return None
 
     except Exception as e:
         print_error(f"Discovery failed: {e}")
+        print_info("Check hardware connections and power supply")
         return None
 
 

@@ -315,20 +315,38 @@ class DigiSensInterface:
         # Successful response should echo the command
         return 'sz' in response.lower()
 
-    def get_mux_address(self, mux_id: str = '000', use_extended: bool = False) -> str:
+    def get_mux_address(self, use_extended: bool = True) -> str:
         """
-        Get MUX address/ID.
+        Get MUX address/ID using the protocol 'ag' broadcast command.
+
+        IMPORTANT: This command is a broadcast and is FORBIDDEN when multiple
+        MUXes are connected (per LOWA protocol specification page 18).
+        Only use this when exactly ONE MUX is connected to the bus.
+
+        For systems with multiple MUXes, the ID must be obtained from the
+        physical label on each MUX device.
 
         Args:
-            mux_id: MUX ID to query (use '000' for broadcast)
-            use_extended: Use extended addressing mode
+            use_extended: Use extended addressing mode (16-char manufacturer ID).
+                         Default True as recommended by manufacturer.
 
         Returns:
-            MUX address string
+            MUX address string (3 digits for standard, 16 chars for extended)
+
+        Raises:
+            TimeoutError: No response (MUX not powered, wrong baudrate, or
+                         multiple MUXes causing collision)
         """
-        command = self._build_command('ag', mux_id, use_extended=use_extended)
+        # Build broadcast 'ag' command per protocol specification
+        # Standard: @05ag<checksum>  Extended: #05ag<checksum>
+        prefix = '#' if use_extended else '@'
+        message = f"{prefix}05ag"
+        checksum = self._calculate_checksum(message)
+        command = f"{message}{checksum}\r"
+
         response = self._send_command(command)
         # Parse address from response
+        # Standard response: @06<nnn><CC>  Extended: #19<16-char-id><CC>
         return response[3:-2]  # Remove prefix, length, and checksum
 
     def get_model_number(self, mux_id: str, use_extended: bool = False) -> str:
