@@ -153,8 +153,9 @@ class DigiSensInterface:
             data = mux_id
 
         # Calculate total length
-        # Length = 2 (prefix + length) + len(command) + len(data) + 2 (checksum)
-        length = 2 + len(command) + len(data) + 2
+        # Length = len(command) + len(data) + 2 (checksum)
+        # Note: prefix and length field itself are NOT included in the length
+        length = len(command) + len(data) + 2
 
         # Build message without checksum
         message = f"{prefix}{length:02d}{command}{data}"
